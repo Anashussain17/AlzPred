@@ -10,6 +10,15 @@ from questions import get_random_questions
 from tensorflow.keras.applications.resnet50 import preprocess_input 
 import secrets
 from flask import current_app
+import gdown
+
+MODEL_PATH = "alz_model.keras"
+MODEL_URL = "https://drive.google.com/uc?id=1nUU8d9knpqLZsXLA5cDTg4MPlt_JrqkY"
+
+# Download model if not exists
+if not os.path.exists(MODEL_PATH):
+    print("Downloading model from Google Drive...")
+    gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
 
 
 app = Flask(__name__)
