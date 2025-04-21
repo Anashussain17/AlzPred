@@ -193,6 +193,8 @@ def contact():
             print("Mail send error:", e)
         return redirect(url_for('contact'))
     return render_template('contact.html')
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
 
 if __name__ == '__main__':
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
