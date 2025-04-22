@@ -10,15 +10,16 @@ from questions import get_random_questions
 from tensorflow.keras.applications.resnet50 import preprocess_input 
 import secrets
 from flask import current_app
-import gdown
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
 MODEL_PATH = "alz_model.keras"
 MODEL_URL = "https://drive.google.com/uc?id=1nUU8d9knpqLZsXLA5cDTg4MPlt_JrqkY"
 
-# Download model if not exists
 if not os.path.exists(MODEL_PATH):
-    print("Downloading model from Google Drive...")
+    print("🔄 Downloading model from Google Drive...")
     gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
+    print("✅ Model downloaded successfully.")
 
 
 app = Flask(__name__)
@@ -134,21 +135,28 @@ def upload():
             filename = secure_filename(file.filename)
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
-            img = load_img(filepath, target_size=(224, 224))
-            img_array = img_to_array(img) 
-            img_array = preprocess_input(img_array) 
-            img_array = np.expand_dims(img_array, axis=0)
-            
-            model = load_model("alz_model.keras")
-            prediction = model.predict(img_array)
-            classes = ['MildDemented', 'ModerateDemented', 
-                      'NonDemented', 'VeryMildDemented']
-            diagnosis = classes[np.argmax(prediction)]
-            
-            return render_template('result.html', 
-                                 status=diagnosis,
-                                 score=session.get('score'))
+
+            try:
+                img = load_img(filepath, target_size=(224, 224))
+                img_array = img_to_array(img) 
+                img_array = preprocess_input(img_array) 
+                img_array = np.expand_dims(img_array, axis=0)
+
+                model = load_model("alz_model.keras")
+                prediction = model.predict(img_array)
+                classes = ['MildDemented', 'ModerateDemented', 
+                           'NonDemented', 'VeryMildDemented']
+                diagnosis = classes[np.argmax(prediction)]
+
+                return render_template('result.html', 
+                                       status=diagnosis,
+                                       score=session.get('score'))
+            except Exception as e:
+                print("Prediction Error:", e)
+                return f"Internal Server Error: {str(e)}"
+
     return render_template('upload.html')
+
 
 
 @app.route('/logout')
