@@ -12,30 +12,65 @@ from tensorflow.keras.applications.resnet50 import preprocess_input
 import secrets
 import gdown
 import logging
-
+import h5py
 # Setup logging
 logging.basicConfig(level=logging.DEBUG)
 
 # Model config
-MODEL_PATH = "alz_model.keras"
-MODEL_URL = "https://drive.google.com/file/d/1HgfOH7C9KuSwitVkiO88DmVmCI4kdLWE/view?usp=drive_link" # Direct download URL
+# Updated model handling section
+import h5py  # Add to imports
 
-# Download and verify model
-if not os.path.exists(MODEL_PATH):
-    print("🔄 Downloading model from Google Drive...")
+def validate_model_file(file_path):
+    """Verify both file structure and TF version compatibility"""
     try:
-        gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
-        # Verify model integrity
-        try:
-            load_model(MODEL_PATH)
-            print("✅ Model verified and loaded successfully.")
-        except Exception as e:
-            print(f"❌ Corrupted model file: {str(e)}")
-            os.remove(MODEL_PATH)
-            exit(1)
+        with h5py.File(file_path, 'r') as f:
+            if 'model_weights' not in f:
+                return False
+        load_model(file_path)
+        return True
     except Exception as e:
-        print(f"❌ Download failed: {str(e)}")
+        print(f"❌ Model validation failed: {str(e)}")
+        return False
+
+def download_with_retry(url, dest):
+    """Robust download with retries and progress tracking"""
+    for attempt in range(3):
+        try:
+            gdown.download(url, dest, quiet=False, resume=True)
+            if os.path.exists(dest) and os.path.getsize(dest) > 1024:
+                return True
+        except Exception as e:
+            print(f"⚠️ Attempt {attempt+1} failed: {str(e)}")
+    return False
+
+# Model configuration
+MODEL_PATH = "alz_model.keras"
+MODEL_URLS = [
+    "https://github.com/Anashussain17/repo/releases/download/v1.0/alz_model.keras",
+    "https://drive.google.com/uc?id=1HgfOH7C9KuSwitVkiO88DmVmCI4kdLWE"
+]
+
+# Download and validate model
+if not os.path.exists(MODEL_PATH) or not validate_model_file(MODEL_PATH):
+    print("🔄 Starting model acquisition...")
+    success = False
+    
+    for url in MODEL_URLS:
+        print(f"🔗 Attempting download from: {url}")
+        if download_with_retry(url, MODEL_PATH):
+            if validate_model_file(MODEL_PATH):
+                success = True
+                break
+            os.remove(MODEL_PATH)
+    
+    if not success:
+        print("❌ All model sources failed. Please:")
+        print("1. Check internet connection")
+        print("2. Verify model URLs are valid")
+        print("3. Contact support if problem persists")
         exit(1)
+
+print("✅ Model verified and ready for use")
 
 # App config
 app = Flask(__name__)
