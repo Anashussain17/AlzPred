@@ -10,6 +10,7 @@ from questions import get_random_questions
 from tensorflow.keras.applications.resnet50 import preprocess_input 
 import secrets
 from flask import current_app
+import gdown
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
