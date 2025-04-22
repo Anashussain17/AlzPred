@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 # Model config
 MODEL_PATH = "alz_model.keras"
-MODEL_URL = "https://drive.google.com/uc?id=1y-kMJGWLci87bv7v4mizNsjvr2RvS2U3"  # Direct download URL
+MODEL_URL = "https://drive.google.com/file/d/1y-kMJGWLci87bv7v4mizNsjvr2RvS2U3/view?usp=sharing" # Direct download URL
 
 # Download and verify model
 if not os.path.exists(MODEL_PATH):
