@@ -46,7 +46,7 @@ def download_with_retry(url, dest):
 # Model configuration
 MODEL_PATH = "alz_model.keras"
 MODEL_URLS = [
-    "https://github.com/Anashussain17/repo/releases/download/v1.0/alz_model.keras",
+    "https://github.com/Anashussain17/AlzPred/releases/downloads/v1.0/alz_model.keras",
     "https://drive.google.com/uc?id=1HgfOH7C9KuSwitVkiO88DmVmCI4kdLWE"
 ]
 
