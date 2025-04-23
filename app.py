@@ -15,7 +15,7 @@ import requests
 # Setup logging
 logging.basicConfig(level=logging.DEBUG)
 MODEL_PATH = "alz_model.keras"
-MODEL_URL = "https://huggingface.co/your-username/your-repo-name/resolve/main/alz_model.keras"
+MODEL_URL = "https://huggingface.co/AnasHussain7/alz-model/resolve/main/alz_model.keras"
 
 def download_model():
     response = requests.get(MODEL_URL, stream=True)
