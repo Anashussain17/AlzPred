@@ -12,13 +12,14 @@ from model import create_custom_resnet  # Your custom model definition
 import secrets
 import logging
 import requests
+from model import create_custom_resnet, focal_loss
 
 # Logging setup
 logging.basicConfig(level=logging.DEBUG)
 
 # Hugging Face URL for model
-MODEL_PATH = "alz_model.h5"
-MODEL_URL = "https://huggingface.co/AnasHussain7/alz-model/resolve/main/alz_model.h5"  # <-- Replace this
+MODEL_PATH = "alz_model.keras"
+MODEL_URL = "https://huggingface.co/AnasHussain7/alz-model/resolve/main/alz_model.keras"  # <-- Replace this
 
 # ✅ Download the model from Hugging Face if not present
 if not os.path.exists(MODEL_PATH):
@@ -140,7 +141,10 @@ def upload():
                 img_array = img_to_array(img)
                 img_array = preprocess_input(img_array)
                 img_array = np.expand_dims(img_array, axis=0)
-                model = load_model(MODEL_PATH)
+                model = load_model("alz_model.keras", custom_objects={
+                    "focal_loss_fixed": focal_loss(),  # match inner function name!
+                })
+
                 prediction = model.predict(img_array)
                 classes = ['MildDemented', 'ModerateDemented', 'NonDemented', 'VeryMildDemented']
                 diagnosis = classes[np.argmax(prediction)]
