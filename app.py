@@ -10,8 +10,8 @@ import secrets
 import requests
 import logging
 from keras.models import load_model  # ✅ Standalone Keras for compatibility
-from tensorflow.keras.preprocessing.image import load_img, img_to_array
-from tensorflow.keras.applications.resnet50 import preprocess_input
+from keras.preprocessing.image import load_img, img_to_array
+from keras.applications.resnet50 import preprocess_input
 
 # ✅ Your custom loss
 from model import focal_loss
