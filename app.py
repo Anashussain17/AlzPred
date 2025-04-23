@@ -20,9 +20,10 @@ from questions import get_random_questions
 # ✅ Logging
 logging.basicConfig(level=logging.DEBUG)
 
+
 # ✅ Constants
-MODEL_PATH = "alz_model.h5"
-MODEL_URL = "https://huggingface.co/AnasHussain7/alz-model/resolve/main/alz_model.h5"
+MODEL_PATH = "alz_model_legacy.h5"
+MODEL_URL = "https://huggingface.co/AnasHussain7/alz-model/resolve/main/alz_model_legacy.h5"
 
 # ✅ Flask app setup
 app = Flask(__name__)
@@ -141,7 +142,7 @@ def upload():
                 img_array = preprocess_input(img_array)
                 img_array = np.expand_dims(img_array, axis=0)
 
-                model = load_model(MODEL_PATH, custom_objects={'focal_loss_fixed': focal_loss()})
+                model = load_model("alz_model_legacy.h5", custom_objects={"focal_loss_fixed": focal_loss()})
                 prediction = model.predict(img_array)
 
                 classes = ['MildDemented', 'ModerateDemented', 'NonDemented', 'VeryMildDemented']
