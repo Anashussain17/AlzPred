@@ -1,3 +1,5 @@
+import os
+os.environ["KERAS_BACKEND"] = "tensorflow"
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import sqlite3, os, secrets, numpy as np, requests
@@ -18,7 +20,7 @@ def focal_loss(gamma=2., alpha=0.25):
         return tf.reduce_mean(tf.reduce_sum(loss, axis=1))
     return focal_loss_fixed
 
-os.environ["KERAS_BACKEND"] = "tensorflow"
+
 
 # Model path & Hugging Face link
 MODEL_PATH = "alz_model.h5"
