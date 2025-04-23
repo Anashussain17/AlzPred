@@ -1,46 +1,48 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-import sqlite3
-import os
+import sqlite3, os, secrets, numpy as np, requests
 from werkzeug.utils import secure_filename
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
-import numpy as np
-from questions import get_random_questions
 from tensorflow.keras.applications.resnet50 import preprocess_input
-from model import create_custom_resnet  # Your custom model definition
-import secrets
-import logging
-import requests
-from model import create_custom_resnet, focal_loss
+import tensorflow as tf
+from questions import get_random_questions
 
-# Logging setup
-logging.basicConfig(level=logging.DEBUG)
+# Define focal loss as used in training
+def focal_loss(gamma=2., alpha=0.25):
+    def focal_loss_fixed(y_true, y_pred):
+        epsilon = 1e-7
+        y_pred = tf.clip_by_value(y_pred, epsilon, 1. - epsilon)
+        cross_entropy = -y_true * tf.math.log(y_pred)
+        loss = alpha * tf.math.pow(1 - y_pred, gamma) * cross_entropy
+        return tf.reduce_mean(tf.reduce_sum(loss, axis=1))
+    return focal_loss_fixed
 
-# Hugging Face URL for model
-MODEL_PATH = "alz_model.keras"
-MODEL_URL = "https://huggingface.co/AnasHussain7/alz-model/resolve/main/alz_model.keras"  # <-- Replace this
+# Model path & Hugging Face link
+MODEL_PATH = "alz_model.h5"
+HF_URL = "https://huggingface.co/AnasHussain7/alz-model/resolve/main/alz_model.h5"
 
-# ✅ Download the model from Hugging Face if not present
+# Download model if not present
 if not os.path.exists(MODEL_PATH):
-    print("🔄 Downloading model from Hugging Face...")
-    with requests.get(MODEL_URL, stream=True) as r:
-        r.raise_for_status()
-        with open(MODEL_PATH, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
+    print("Downloading model from Hugging Face...")
+    r = requests.get(HF_URL, stream=True)
+    with open(MODEL_PATH, 'wb') as f:
+        for chunk in r.iter_content(chunk_size=8192):
+            f.write(chunk)
     if os.path.getsize(MODEL_PATH) < 1000000:
         os.remove(MODEL_PATH)
-        raise Exception("❌ Model download failed or is corrupted.")
-    print("✅ Model downloaded successfully.")
+        raise Exception("Model corrupted or failed to download.")
+    print("Model downloaded successfully.")
 
-# ✅ App config
+# Load the model with custom_objects
+model = load_model(MODEL_PATH, custom_objects={'focal_loss_fixed': focal_loss()})
+
+# Flask app setup
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg'}
 
-# ✅ Login setup
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -62,6 +64,7 @@ def get_db_connection():
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
+# Routes
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -93,10 +96,10 @@ def register():
         try:
             conn.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, password))
             conn.commit()
-            flash("Registration successful!", "success")
+            flash("Registration successful! You can now log in.", "success")
             return redirect(url_for('login'))
         except sqlite3.IntegrityError:
-            flash("Username already exists. Please choose a different one.", "danger")
+            flash("Username already exists.", "danger")
         finally:
             conn.close()
         return redirect(url_for('register'))
@@ -141,10 +144,6 @@ def upload():
                 img_array = img_to_array(img)
                 img_array = preprocess_input(img_array)
                 img_array = np.expand_dims(img_array, axis=0)
-                model = load_model("alz_model.keras", custom_objects={
-                    "focal_loss_fixed": focal_loss(),  # match inner function name!
-                })
-
                 prediction = model.predict(img_array)
                 classes = ['MildDemented', 'ModerateDemented', 'NonDemented', 'VeryMildDemented']
                 diagnosis = classes[np.argmax(prediction)]
@@ -175,13 +174,11 @@ def faq():
 @app.route('/contact', methods=['GET', 'POST'])
 def contact():
     if request.method == 'POST':
-        name = request.form.get('name')
-        email = request.form.get('email')
-        message_text = request.form.get('message')
-        flash("Message received successfully (email service not configured).", "success")
+        flash("Message received successfully (email not configured).", "success")
         return redirect(url_for('contact'))
     return render_template('contact.html')
 
+# Run on Render
 if __name__ == "__main__":
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
