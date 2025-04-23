@@ -18,6 +18,8 @@ def focal_loss(gamma=2., alpha=0.25):
         return tf.reduce_mean(tf.reduce_sum(loss, axis=1))
     return focal_loss_fixed
 
+os.environ["KERAS_BACKEND"] = "tensorflow"
+
 # Model path & Hugging Face link
 MODEL_PATH = "alz_model.h5"
 HF_URL = "https://huggingface.co/AnasHussain7/alz-model/resolve/main/alz_model.h5"
