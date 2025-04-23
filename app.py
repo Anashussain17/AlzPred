@@ -8,23 +8,38 @@ from tensorflow.keras.preprocessing.image import load_img, img_to_array
 import numpy as np
 from questions import get_random_questions
 from tensorflow.keras.applications.resnet50 import preprocess_input
-from model import create_custom_resnet  # 👈 Import your custom model architecture
+from model import create_custom_resnet  # Your custom model definition
 import secrets
 import logging
+import requests
 
-# Setup logging
+# Logging setup
 logging.basicConfig(level=logging.DEBUG)
 
-# ✅ Model Config
+# Hugging Face URL for model
 MODEL_PATH = "alz_model.h5"
+MODEL_URL = "https://huggingface.co/AnasHussain7/alz-model/resolve/main/alz_model.h5"  # <-- Replace this
 
-# ✅ App Configuration
+# ✅ Download the model from Hugging Face if not present
+if not os.path.exists(MODEL_PATH):
+    print("🔄 Downloading model from Hugging Face...")
+    with requests.get(MODEL_URL, stream=True) as r:
+        r.raise_for_status()
+        with open(MODEL_PATH, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+    if os.path.getsize(MODEL_PATH) < 1000000:
+        os.remove(MODEL_PATH)
+        raise Exception("❌ Model download failed or is corrupted.")
+    print("✅ Model downloaded successfully.")
+
+# ✅ App config
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg'}
 
-# ✅ Flask-Login Configuration
+# ✅ Login setup
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -46,8 +61,6 @@ def get_db_connection():
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
-# ✅ ROUTES
-
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -60,17 +73,14 @@ def login():
         conn = get_db_connection()
         user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
         conn.close()
-
         if user and user['password'] == password:
             user_obj = User()
             user_obj.id = username
             login_user(user_obj)
             flash("Login successful!", "success")
             return redirect(url_for('dashboard'))
-
         flash("Invalid username or password", "danger")
         return redirect(url_for('login'))
-
     return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -82,14 +92,13 @@ def register():
         try:
             conn.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, password))
             conn.commit()
-            flash("Registration successful! You can now log in.", "success")
+            flash("Registration successful!", "success")
             return redirect(url_for('login'))
         except sqlite3.IntegrityError:
             flash("Username already exists. Please choose a different one.", "danger")
         finally:
             conn.close()
         return redirect(url_for('register'))
-
     return render_template('register.html')
 
 @app.route('/dashboard')
@@ -121,31 +130,24 @@ def upload():
     if request.method == 'POST':
         if 'mri' not in request.files:
             return 'No file uploaded'
-        
         file = request.files['mri']
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
-
             try:
                 img = load_img(filepath, target_size=(224, 224))
                 img_array = img_to_array(img)
                 img_array = preprocess_input(img_array)
                 img_array = np.expand_dims(img_array, axis=0)
-
-                # ✅ Load the custom model
                 model = load_model(MODEL_PATH, custom_objects={'Functional': create_custom_resnet})
-
                 prediction = model.predict(img_array)
                 classes = ['MildDemented', 'ModerateDemented', 'NonDemented', 'VeryMildDemented']
                 diagnosis = classes[np.argmax(prediction)]
-
                 return render_template('result.html', status=diagnosis, score=session.get('score'))
             except Exception as e:
                 print("Prediction Error:", e)
                 return f"Internal Server Error: {str(e)}"
-
     return render_template('upload.html')
 
 @app.route('/logout')
@@ -172,16 +174,12 @@ def contact():
         name = request.form.get('name')
         email = request.form.get('email')
         message_text = request.form.get('message')
-        try:
-            flash("Message received successfully (email sending not configured).", "success")
-        except Exception as e:
-            flash("An error occurred while sending your message.", "danger")
-            print("Mail send error:", e)
+        flash("Message received successfully (email service not configured).", "success")
         return redirect(url_for('contact'))
     return render_template('contact.html')
 
-# ✅ Deployment Run Block
 if __name__ == "__main__":
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+
 
