@@ -11,22 +11,27 @@ from tensorflow.keras.applications.resnet50 import preprocess_input
 import secrets
 import gdown
 import logging
-
+import requests
 # Setup logging
 logging.basicConfig(level=logging.DEBUG)
-
-# ✅ Model Configuration
 MODEL_PATH = "alz_model.keras"
-MODEL_URL = "https://drive.google.com/uc?export=download&id=1y-kMJGWLci87bv7v4mizNsjvr2RvS2U3"
+MODEL_URL = "https://huggingface.co/your-username/your-repo-name/resolve/main/alz_model.keras"
 
+def download_model():
+    response = requests.get(MODEL_URL, stream=True)
+    with open(MODEL_PATH, "wb") as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            if chunk:
+                f.write(chunk)
 
-# ✅ Download model if not present
+# Download if not present
 if not os.path.exists(MODEL_PATH):
-    print("🔄 Downloading model from Google Drive...")
-    gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
+    print("🔄 Downloading model from Hugging Face...")
+    download_model()
     if not os.path.exists(MODEL_PATH) or os.path.getsize(MODEL_PATH) < 1000000:
         raise RuntimeError("❌ Model download failed or is corrupted.")
     print("✅ Model downloaded successfully.")
+
 
 # ✅ App Configuration
 app = Flask(__name__)
