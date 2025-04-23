@@ -140,7 +140,7 @@ def upload():
                 img_array = img_to_array(img)
                 img_array = preprocess_input(img_array)
                 img_array = np.expand_dims(img_array, axis=0)
-                model = load_model(MODEL_PATH, custom_objects={'Functional': create_custom_resnet})
+                model = load_model(MODEL_PATH)
                 prediction = model.predict(img_array)
                 classes = ['MildDemented', 'ModerateDemented', 'NonDemented', 'VeryMildDemented']
                 diagnosis = classes[np.argmax(prediction)]
