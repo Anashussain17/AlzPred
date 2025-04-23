@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import sqlite3
 import os
-import tensorflow
 from werkzeug.utils import secure_filename
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
@@ -16,23 +15,28 @@ import logging
 # Setup logging
 logging.basicConfig(level=logging.DEBUG)
 
-# Model config
+# ✅ Model Configuration
 MODEL_PATH = "alz_model.keras"
-MODEL_URL = "https://drive.google.com/file/d/1y-kMJGWLci87bv7v4mizNsjvr2RvS2U3/view?usp=sharing"
+FILE_ID = "1y-kMJGWLci87bv7v4mizNsjvr2RvS2U3"
+MODEL_URL = f"https://drive.google.com/uc?id={FILE_ID}"
 
-# Download model if not present
+# ✅ Download model if not present
 if not os.path.exists(MODEL_PATH):
     print("🔄 Downloading model from Google Drive...")
     gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
+    # Safety check for corrupted HTML download
+    if os.path.getsize(MODEL_PATH) < 1000000:
+        os.remove(MODEL_PATH)
+        raise Exception("❌ Model download failed or corrupted.")
     print("✅ Model downloaded successfully.")
 
-# App config
+# ✅ App Configuration
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg'}
 
-# Flask-Login setup
+# ✅ Login Configuration
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -54,7 +58,8 @@ def get_db_connection():
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
-# Routes
+# ✅ ROUTES
+
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -178,23 +183,15 @@ def contact():
         email = request.form.get('email')
         message_text = request.form.get('message')
         try:
-            msg = Message(
-                subject=f"New Contact Form Submission from {name}",
-                sender=email,
-                recipients=["alzpredict66@gmail.com"],
-                reply_to=email
-            )
-            msg.body = f"Message from {name} ({email}):\n\n{message_text}"
-            mail.send(msg)
-            flash("Your message has been sent successfully!", "success")
+            # Email service skipped here; you can add Flask-Mail setup
+            flash("Message received successfully (email sending not configured).", "success")
         except Exception as e:
-            flash("An error occurred while sending your message. Please try again later.", "danger")
+            flash("An error occurred while sending your message.", "danger")
             print("Mail send error:", e)
         return redirect(url_for('contact'))
     return render_template('contact.html')
 
-# ✅ Deployment-friendly run block
+# ✅ Render/Deployment-friendly run block
 if __name__ == "__main__":
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
-
