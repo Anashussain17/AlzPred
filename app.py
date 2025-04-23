@@ -8,30 +8,15 @@ from tensorflow.keras.preprocessing.image import load_img, img_to_array
 import numpy as np
 from questions import get_random_questions
 from tensorflow.keras.applications.resnet50 import preprocess_input
+from model import create_custom_resnet  # 👈 Import your custom model architecture
 import secrets
-import gdown
 import logging
-import requests
+
 # Setup logging
 logging.basicConfig(level=logging.DEBUG)
-MODEL_PATH = "alz_model.keras"
-MODEL_URL = "https://huggingface.co/AnasHussain7/alz-model/resolve/main/alz_model.keras"
 
-def download_model():
-    response = requests.get(MODEL_URL, stream=True)
-    with open(MODEL_PATH, "wb") as f:
-        for chunk in response.iter_content(chunk_size=8192):
-            if chunk:
-                f.write(chunk)
-
-# Download if not present
-if not os.path.exists(MODEL_PATH):
-    print("🔄 Downloading model from Hugging Face...")
-    download_model()
-    if not os.path.exists(MODEL_PATH) or os.path.getsize(MODEL_PATH) < 1000000:
-        raise RuntimeError("❌ Model download failed or is corrupted.")
-    print("✅ Model downloaded successfully.")
-
+# ✅ Model Config
+MODEL_PATH = "alz_model.h5"
 
 # ✅ App Configuration
 app = Flask(__name__)
@@ -39,7 +24,7 @@ app.secret_key = secrets.token_hex(16)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg'}
 
-# ✅ Login Configuration
+# ✅ Flask-Login Configuration
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -149,7 +134,9 @@ def upload():
                 img_array = preprocess_input(img_array)
                 img_array = np.expand_dims(img_array, axis=0)
 
-                model = load_model(MODEL_PATH)
+                # ✅ Load the custom model
+                model = load_model(MODEL_PATH, custom_objects={'Functional': create_custom_resnet})
+
                 prediction = model.predict(img_array)
                 classes = ['MildDemented', 'ModerateDemented', 'NonDemented', 'VeryMildDemented']
                 diagnosis = classes[np.argmax(prediction)]
@@ -186,7 +173,6 @@ def contact():
         email = request.form.get('email')
         message_text = request.form.get('message')
         try:
-            # Email service skipped here; you can add Flask-Mail setup
             flash("Message received successfully (email sending not configured).", "success")
         except Exception as e:
             flash("An error occurred while sending your message.", "danger")
@@ -194,7 +180,8 @@ def contact():
         return redirect(url_for('contact'))
     return render_template('contact.html')
 
-# ✅ Render/Deployment-friendly run block
+# ✅ Deployment Run Block
 if __name__ == "__main__":
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+
