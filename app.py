@@ -17,17 +17,15 @@ logging.basicConfig(level=logging.DEBUG)
 
 # ✅ Model Configuration
 MODEL_PATH = "alz_model.keras"
-FILE_ID = "1y-kMJGWLci87bv7v4mizNsjvr2RvS2U3"
-MODEL_URL = f"https://drive.google.com/uc?id={FILE_ID}"
+MODEL_URL = "https://drive.google.com/uc?export=download&id=1y-kMJGWLci87bv7v4mizNsjvr2RvS2U3"
+
 
 # ✅ Download model if not present
 if not os.path.exists(MODEL_PATH):
     print("🔄 Downloading model from Google Drive...")
     gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
-    # Safety check for corrupted HTML download
-    if os.path.getsize(MODEL_PATH) < 1000000:
-        os.remove(MODEL_PATH)
-        raise Exception("❌ Model download failed or corrupted.")
+    if not os.path.exists(MODEL_PATH) or os.path.getsize(MODEL_PATH) < 1000000:
+        raise RuntimeError("❌ Model download failed or is corrupted.")
     print("✅ Model downloaded successfully.")
 
 # ✅ App Configuration
