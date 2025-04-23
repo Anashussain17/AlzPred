@@ -9,8 +9,7 @@ import numpy as np
 import secrets
 import requests
 import logging
-
-from tensorflow.keras.models import load_model
+from keras.models import load_model  # ✅ Standalone Keras for compatibility
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from tensorflow.keras.applications.resnet50 import preprocess_input
 
